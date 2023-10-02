@@ -30,6 +30,7 @@
 
 #pragma once
 
+#include <stdint.h>
 #include <glib.h>
 #include <gio/gio.h>
 #include <vector>
