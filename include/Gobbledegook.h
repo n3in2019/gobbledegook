@@ -55,6 +55,14 @@
 
 #pragma once
 
+#include <functional>
+
+struct GGKDataContext {
+  const unsigned char *data;
+  unsigned size;
+  std::function<void(const unsigned char*, unsigned)> notify;
+};
+
 #ifdef __cplusplus
 extern "C"
 {

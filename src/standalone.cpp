@@ -96,6 +96,7 @@
 #include <iostream>
 #include <thread>
 #include <sstream>
+#include <vector>
 
 #include "../include/Gobbledegook.h"
 
@@ -173,8 +174,11 @@ void signalHandler(int signum)
 //
 // The server calls this method from its own thread, so we must ensure our implementation is thread-safe. In our case, we're simply
 // sending over stored values, so we don't need to take any additional steps to ensure thread-safety.
+std::string data = "hello world";
+unsigned char d[10240];
 const void *dataGetter(const char *pName)
 {
+        std::cout << "on data getter" << pName << "\n";
 	if (nullptr == pName)
 	{
 		LogError("NULL name sent to server data getter");
@@ -183,14 +187,15 @@ const void *dataGetter(const char *pName)
 
 	std::string strName = pName;
 
-	if (strName == "battery/level")
-	{
-		return &serverDataBatteryLevel;
-	}
-	else if (strName == "text/string")
-	{
-		return serverDataTextString.c_str();
-	}
+        if (strName == "/dummy/dummy") {
+                auto *ctx = new GGKDataContext();
+                for (int i =0 ; i<10240; ++i) {
+                  d[i] = 0;
+                }
+                ctx->data = d;
+                ctx->size = 10240;
+                return ctx;
+        }
 
 	LogWarn((std::string("Unknown name for server data getter request: '") + pName + "'").c_str());
 	return nullptr;
@@ -214,23 +219,20 @@ int dataSetter(const char *pName, const void *pData)
 		LogError("NULL pData sent to server data setter");
 		return 0;
 	}
+        auto ctx = *(GGKDataContext*)pData;
 
 	std::string strName = pName;
 
-	if (strName == "battery/level")
-	{
-		serverDataBatteryLevel = *static_cast<const uint8_t *>(pData);
-		LogDebug((std::string("Server data: battery level set to ") + std::to_string(serverDataBatteryLevel)).c_str());
-		return 1;
-	}
-	else if (strName == "text/string")
-	{
-		serverDataTextString = static_cast<const char *>(pData);
-		LogDebug((std::string("Server data: text string set to '") + serverDataTextString + "'").c_str());
-		return 1;
-	}
+        if (strName == "/dummy/dummy") {
+                for (int i = 0; i < ctx.size; ++i) {
+                  printf("0x%x ", ctx.data[i]);
+                }
+                std::cout <<"\n";
+                ctx.notify(ctx.data, ctx.size);
+                return 1;
+        }
 
-	LogWarn((std::string("Unknown name for server data setter request: '") + pName + "'").c_str());
+        LogWarn((std::string("Unknown name for server data setter request: '") + pName + "'").c_str());
 
 	return 0;
 }
@@ -289,7 +291,7 @@ int main(int argc, char **ppArgv)
 	//     This first parameter (the service name) must match tha name configured in the D-Bus permissions. See the Readme.md file
 	//     for more information.
 	//
-	if (!ggkStart("gobbledegook", "Gobbledegook", "Gobbledegook", dataGetter, dataSetter, kMaxAsyncInitTimeoutMS))
+        if (!ggkStart("simmower", "simmower", "simmower", dataGetter, dataSetter, kMaxAsyncInitTimeoutMS))
 	{
 		return -1;
 	}
@@ -301,8 +303,8 @@ int main(int argc, char **ppArgv)
 	{
 		std::this_thread::sleep_for(std::chrono::seconds(15));
 
-		serverDataBatteryLevel = std::max(serverDataBatteryLevel - 1, 0);
-		ggkNofifyUpdatedCharacteristic("/com/gobbledegook/battery/level");
+//		serverDataBatteryLevel = std::max(serverDataBatteryLevel - 1, 0);
+//		ggkNofifyUpdatedCharacteristic("/com/gobbledegook/battery/level");
 	}
 
 	// Wait for the server to come to a complete stop (CTRL-C from the command line)

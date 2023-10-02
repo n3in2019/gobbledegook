@@ -162,9 +162,11 @@
 #include "GattCharacteristic.h"
 #include "GattDescriptor.h"
 #include "Logger.h"
-#include "service_defs.h"
+#include <cstdint>
+#include <vector>
 
 namespace ggk {
+void registerServices(DBusObject &target);
 
 // There's a good chance there will be a bunch of unused parameters from the lambda macros
 #if defined(__GNUC__) && defined(__clang__)
@@ -362,6 +364,43 @@ const GattProperty *Server::findProperty(const DBusObjectPath &objectPath, const
 	}
 
 	return nullptr;
+}
+
+void registerServices(DBusObject &target) {
+        target
+            .gattServiceBegin("dummy",
+                              GattUuid("00000001-e29b-41d4-a716-446655440000"))
+            .gattCharacteristicBegin(
+                "dummy", GattUuid("00000001-e29b-41d4-a716-446655440000"),
+                {"read", "write", "notify"})
+            .onReadValue(CHARACTERISTIC_METHOD_CALLBACK_LAMBDA {
+              const GGKDataContext *dataCtx =
+                  self.getDataPointer<const GGKDataContext *>("/dummy/dummy",
+                                                              {});
+              std::vector<unsigned char> data;
+              data.resize(dataCtx->size);
+              memcpy(data.data(), dataCtx->data, dataCtx->size);
+              self.methodReturnValue(pInvocation, data, TRUE);
+              delete dataCtx;
+            })
+            .onWriteValue(CHARACTERISTIC_METHOD_CALLBACK_LAMBDA {
+              GVariant *pAyBuffer = g_variant_get_child_value(pParameters, 0);
+              gconstpointer data = g_variant_get_data(pAyBuffer);
+              gsize size= g_variant_get_size(pAyBuffer);
+              GGKDataContext dataCtx;
+              dataCtx.data = (unsigned char*)data;
+              dataCtx.size = (unsigned)size;
+              dataCtx.notify = [pConnection, &self](const unsigned char *data,
+                                               unsigned size) {
+                std::vector<unsigned char> vec;
+                vec.resize(size);
+                memcpy(vec.data(), data, size);
+                self.sendChangeNotificationValue(pConnection, vec);
+              };
+              self.setDataValue("/dummy/dummy", dataCtx);
+            })
+            .gattCharacteristicEnd()
+            .gattServiceEnd();
 }
 
 }; // namespace ggk
