@@ -382,7 +382,7 @@ void onMethodCall
 	// Convert our input path into our custom type for path management
 	DBusObjectPath objectPath(pObjectPath);
 
-	if (!TheServer->callMethod(objectPath, pInterfaceName, pMethodName, pConnection, pParameters, pInvocation, pUserData))
+        if (!TheServer->callMethod(objectPath, pInterfaceName, pMethodName, pConnection, pParameters, pInvocation, (void*)objectPath.toString().c_str()))
 	{
 		Logger::error(SSTR << " + Method not found: [" << pSender << "]:[" << objectPath << "]:[" << pInterfaceName << "]:[" << pMethodName << "]");
 		g_dbus_method_invocation_return_dbus_error(pInvocation, kErrorNotImplemented.c_str(), "This method is not implemented");

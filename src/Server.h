@@ -30,6 +30,7 @@
 #include <vector>
 #include <list>
 #include <memory>
+#include <unordered_map>
 
 #include "../include/Gobbledegook.h"
 #include "DBusObject.h"
@@ -158,8 +159,8 @@ struct Server
 	//
 	//     Retrieve this value using the `getAdvertisingShortName()` method.
 	//
-	Server(const std::string &serviceName, const std::string &advertisingName, const std::string &advertisingShortName, 
-		GGKServerDataGetter getter, GGKServerDataSetter setter);
+        Server(const std::string &serviceName, const std::string &advertisingName, const std::string &advertisingShortName,
+               GGKServerDataGetter getter, GGKServerDataSetter setter, const std::vector<Service> &services, std::unordered_map<std::string, NotifyFunc> &notify_map);
 
 	//
 	// Utilitarian

@@ -124,7 +124,7 @@ struct GattCharacteristic : GattInterface
 	//
 	//     Input args:  options - "a{sv}"
 	//     Output args: value   - "ay"
-	GattCharacteristic &onReadValue(MethodCallback callback);
+        GattCharacteristic &onReadValue(MethodCallback callback);
 
 	// Specialized support for Characteristic WriteValue method
 	//

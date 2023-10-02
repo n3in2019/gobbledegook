@@ -187,7 +187,7 @@ const void *dataGetter(const char *pName)
 
 	std::string strName = pName;
 
-        if (strName == "/dummy/dummy") {
+        if (strName == "/com/simmower/dummy/dummy") {
                 auto *ctx = new GGKDataContext();
                 for (int i =0 ; i<10240; ++i) {
                   d[i] = 0;
@@ -223,12 +223,12 @@ int dataSetter(const char *pName, const void *pData)
 
 	std::string strName = pName;
 
-        if (strName == "/dummy/dummy") {
+        if (strName == "/com/simmower/dummy/dummy") {
                 for (int i = 0; i < ctx.size; ++i) {
                   printf("0x%x ", ctx.data[i]);
                 }
                 std::cout <<"\n";
-                ctx.notify(ctx.data, ctx.size);
+//                ctx.notify(ctx.data, ctx.size);
                 return 1;
         }
 
@@ -291,7 +291,17 @@ int main(int argc, char **ppArgv)
 	//     This first parameter (the service name) must match tha name configured in the D-Bus permissions. See the Readme.md file
 	//     for more information.
 	//
-        if (!ggkStart("simmower", "simmower", "simmower", dataGetter, dataSetter, kMaxAsyncInitTimeoutMS))
+        std::unordered_map<std::string, NotifyFunc> notify_map;
+        Service service;
+        service.service_path ="dummy";
+        service.characteristic_path = "dummy";
+        service.characteristic_uuid =
+                             ("00000001-e29b-41d4-a716-446655440000");
+        service.service_uuid =
+                             ("00000001-e29b-41d4-a716-446655440000");
+        service.props = {"read", "write", "notify"};
+        std::vector<Service> services = {service};
+        if (!ggkStart("simmower", "simmower", "simmower", dataGetter, dataSetter, services, notify_map, kMaxAsyncInitTimeoutMS))
 	{
 		return -1;
 	}
@@ -301,7 +311,11 @@ int main(int argc, char **ppArgv)
 	// While we wait, every 15 ticks, drop the battery level by one percent until we reach 0
 	while (ggkGetServerRunState() < EStopping)
 	{
-		std::this_thread::sleep_for(std::chrono::seconds(15));
+                std::this_thread::sleep_for(std::chrono::seconds(1));
+                std::string data = "hello";
+
+                auto iter = notify_map.find(std::string("/com/simmower/dummy/dummy"));
+                iter->second((unsigned char*)data.data(), data.size());
 
 //		serverDataBatteryLevel = std::max(serverDataBatteryLevel - 1, 0);
 //		ggkNofifyUpdatedCharacteristic("/com/gobbledegook/battery/level");

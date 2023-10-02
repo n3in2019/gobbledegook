@@ -166,7 +166,9 @@
 #include <vector>
 
 namespace ggk {
-void registerServices(DBusObject &target);
+
+extern GDBusConnection *pBusConnection;
+void registerServices(DBusObject& target, const std::vector<Service> &services, std::unordered_map<std::string, NotifyFunc> &notify_map);
 
 // There's a good chance there will be a bunch of unused parameters from the lambda macros
 #if defined(__GNUC__) && defined(__clang__)
@@ -219,8 +221,8 @@ std::shared_ptr<Server> TheServer = nullptr;
 //
 //     Retrieve this value using the `getAdvertisingShortName()` method.
 //
-Server::Server(const std::string &serviceName, const std::string &advertisingName, const std::string &advertisingShortName, 
-	GGKServerDataGetter getter, GGKServerDataSetter setter)
+Server::Server(const std::string &serviceName, const std::string &advertisingName, const std::string &advertisingShortName,
+        GGKServerDataGetter getter, GGKServerDataSetter setter, const std::vector<Service> &services, std::unordered_map<std::string, NotifyFunc> &notify_map)
 {
 	// Save our names
 	this->serviceName = serviceName;
@@ -247,7 +249,7 @@ Server::Server(const std::string &serviceName, const std::string &advertisingNam
 	// Create the root D-Bus object and push it into the list
 	objects.push_back(DBusObject(DBusObjectPath() + "com" + getServiceName()));
 
-        registerServices(objects.back());
+        registerServices(objects.back(), services, notify_map);
 	//  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 	//                                                ____ _____ ___  _____
 	//                                               / ___|_   _/ _ \|  _  |
@@ -366,41 +368,47 @@ const GattProperty *Server::findProperty(const DBusObjectPath &objectPath, const
 	return nullptr;
 }
 
-void registerServices(DBusObject &target) {
-        target
-            .gattServiceBegin("dummy",
-                              GattUuid("00000001-e29b-41d4-a716-446655440000"))
-            .gattCharacteristicBegin(
-                "dummy", GattUuid("00000001-e29b-41d4-a716-446655440000"),
-                {"read", "write", "notify"})
-            .onReadValue(CHARACTERISTIC_METHOD_CALLBACK_LAMBDA {
-              const GGKDataContext *dataCtx =
-                  self.getDataPointer<const GGKDataContext *>("/dummy/dummy",
-                                                              {});
-              std::vector<unsigned char> data;
-              data.resize(dataCtx->size);
-              memcpy(data.data(), dataCtx->data, dataCtx->size);
-              self.methodReturnValue(pInvocation, data, TRUE);
-              delete dataCtx;
-            })
-            .onWriteValue(CHARACTERISTIC_METHOD_CALLBACK_LAMBDA {
-              GVariant *pAyBuffer = g_variant_get_child_value(pParameters, 0);
-              gconstpointer data = g_variant_get_data(pAyBuffer);
-              gsize size= g_variant_get_size(pAyBuffer);
-              GGKDataContext dataCtx;
-              dataCtx.data = (unsigned char*)data;
-              dataCtx.size = (unsigned)size;
-              dataCtx.notify = [pConnection, &self](const unsigned char *data,
-                                               unsigned size) {
-                std::vector<unsigned char> vec;
-                vec.resize(size);
-                memcpy(vec.data(), data, size);
-                self.sendChangeNotificationValue(pConnection, vec);
-              };
-              self.setDataValue("/dummy/dummy", dataCtx);
-            })
-            .gattCharacteristicEnd()
-            .gattServiceEnd();
-}
 
+void registerServices(DBusObject& target, const std::vector<Service> &services, std::unordered_map<std::string, NotifyFunc> &notify_map) {
+        for (const auto &service : services) {
+                auto gatt_service = target.gattServiceBegin(service.service_path, GattUuid(service.service_uuid));
+                auto &gatt_characteristic =
+                    gatt_service
+                        .gattCharacteristicBegin(service.characteristic_path,
+                                                 service.characteristic_uuid,
+                                                 service.props)
+                        .onReadValue(CHARACTERISTIC_METHOD_CALLBACK_LAMBDA {
+                          const GGKDataContext *dataCtx =
+                              self.getDataPointer<const GGKDataContext *>(
+                                  (const char *)pUserData, {});
+                          std::vector<unsigned char> data;
+                          data.resize(dataCtx->size);
+                          memcpy(data.data(), dataCtx->data, dataCtx->size);
+                          self.methodReturnValue(pInvocation, data, TRUE);
+                          delete dataCtx;
+                        })
+                        .onWriteValue(CHARACTERISTIC_METHOD_CALLBACK_LAMBDA {
+                          GVariant *pAyBuffer =
+                              g_variant_get_child_value(pParameters, 0);
+                          gconstpointer data = g_variant_get_data(pAyBuffer);
+                          gsize size = g_variant_get_size(pAyBuffer);
+                          GGKDataContext dataCtx;
+                          dataCtx.data = (unsigned char *)data;
+                          dataCtx.size = (unsigned)size;
+                          self.setDataValue((const char *)pUserData, dataCtx);
+                        });
+                gatt_service.gattServiceEnd();
+
+                notify_map[std::string("/com/simmower/" + service.service_path +
+                                       "/" + service.characteristic_path)] =
+                    [&gatt_characteristic](const unsigned char *data,
+                                          unsigned size) {
+                      std::vector<unsigned char> vec;
+                      vec.resize(size);
+                      memcpy(vec.data(), data, size);
+                      gatt_characteristic.sendChangeNotificationValue(
+                          pBusConnection, vec);
+                    };
+        }
+}
 }; // namespace ggk
