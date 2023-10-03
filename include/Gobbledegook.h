@@ -56,12 +56,24 @@
 #pragma once
 
 #include <functional>
+#include <string>
+#include <vector>
+#include <unordered_map>
 
-struct GGKDataContext {
-  const unsigned char *data;
+struct GGKData {
+  unsigned char *data;
   unsigned size;
-  std::function<void(const unsigned char*, unsigned)> notify;
 };
+
+struct Service {
+  std::string service_path;
+  std::string service_uuid;
+  std::string characteristic_path;
+  std::string characteristic_uuid;
+  std::vector<const char*> props;
+};
+
+using NotifyFunc = std::function<void(const unsigned char*, unsigned)>;
 
 #ifdef __cplusplus
 extern "C"
@@ -218,10 +230,10 @@ extern "C"
 	//
 	//     Retrieve this value using the `getAdvertisingShortName()` method
 	//
-	int ggkStart(const char *pServiceName, const char *pAdvertisingName, const char *pAdvertisingShortName, 
-		GGKServerDataGetter getter, GGKServerDataSetter setter, int maxAsyncInitTimeoutMS);
 
-	// Blocks for up to maxAsyncInitTimeoutMS milliseconds until the server shuts down.
+        int ggkStart(const char *pServiceName, const char *pAdvertisingName, const char *pAdvertisingShortName,
+                     GGKServerDataGetter getter, GGKServerDataSetter setter, const std::vector<Service> &services, std::unordered_map<std::string, NotifyFunc> &notify_map, int maxAsyncInitTimeoutMS);
+        // Blocks for up to maxAsyncInitTimeoutMS milliseconds until the server shuts down.
 	//
 	// If shutdown is successful, this method will return a non-zero value. Otherwise, it will return 0.
 	//

@@ -378,8 +378,8 @@ void registerServices(DBusObject& target, const std::vector<Service> &services, 
                                                  service.characteristic_uuid,
                                                  service.props)
                         .onReadValue(CHARACTERISTIC_METHOD_CALLBACK_LAMBDA {
-                          const GGKDataContext *dataCtx =
-                              self.getDataPointer<const GGKDataContext *>(
+                          const GGKData *dataCtx =
+                              self.getDataPointer<const GGKData *>(
                                   (const char *)pUserData, {});
                           std::vector<unsigned char> data;
                           data.resize(dataCtx->size);
@@ -392,10 +392,10 @@ void registerServices(DBusObject& target, const std::vector<Service> &services, 
                               g_variant_get_child_value(pParameters, 0);
                           gconstpointer data = g_variant_get_data(pAyBuffer);
                           gsize size = g_variant_get_size(pAyBuffer);
-                          GGKDataContext dataCtx;
+                          GGKData dataCtx;
                           dataCtx.data = (unsigned char *)data;
                           dataCtx.size = (unsigned)size;
-                          self.setDataValue((const char *)pUserData, dataCtx);
+                          self.setDataPointer((const char *)pUserData, &dataCtx);
                         });
                 gatt_service.gattServiceEnd();
 
