@@ -97,6 +97,7 @@
 #include <thread>
 #include <sstream>
 #include <vector>
+#include <unordered_map>
 
 #include "../include/Gobbledegook.h"
 
@@ -188,7 +189,7 @@ const void *dataGetter(const char *pName)
 	std::string strName = pName;
 
         if (strName == "/com/simmower/dummy/dummy") {
-                auto *ctx = new GGKDataContext();
+                auto *ctx = new GGKData();
                 for (int i =0 ; i<10240; ++i) {
                   d[i] = 0;
                 }
@@ -219,13 +220,13 @@ int dataSetter(const char *pName, const void *pData)
 		LogError("NULL pData sent to server data setter");
 		return 0;
 	}
-        auto ctx = *(GGKDataContext*)pData;
+        auto ctx = (GGKData*)pData;
 
 	std::string strName = pName;
 
         if (strName == "/com/simmower/dummy/dummy") {
-                for (int i = 0; i < ctx.size; ++i) {
-                  printf("0x%x ", ctx.data[i]);
+                for (int i = 0; i < ctx->size; ++i) {
+                  printf("0x%x ", ctx->data[i]);
                 }
                 std::cout <<"\n";
 //                ctx.notify(ctx.data, ctx.size);

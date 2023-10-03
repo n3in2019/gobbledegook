@@ -396,6 +396,7 @@ void registerServices(DBusObject& target, const std::vector<Service> &services, 
                           dataCtx.data = (unsigned char *)data;
                           dataCtx.size = (unsigned)size;
                           self.setDataPointer((const char *)pUserData, &dataCtx);
+                          self.methodReturnVariant(pInvocation, NULL);
                         });
                 gatt_service.gattServiceEnd();
 

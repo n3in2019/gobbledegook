@@ -51,6 +51,4 @@ src/ServerUtils.h
 src/TickEvent.h
 src/Utils.cpp
 src/Utils.h
-src/service_defs.cpp
-src/service_defs.h
 src/standalone.cpp
