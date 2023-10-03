@@ -388,8 +388,8 @@ void registerServices(DBusObject& target, const std::vector<Service> &services, 
                           memcpy(data.data(), dataCtx->data, dataCtx->size);
                           self.methodReturnValue(pInvocation, data, TRUE);
 
-                          if (dataCtx) {
-                            if (dataCtx->can_free) {
+                          if (dataCtx && dataCtx->can_free) {
+                            if (dataCtx->data) {
                               free(dataCtx->data);
                               dataCtx->data = NULL;
                             }
