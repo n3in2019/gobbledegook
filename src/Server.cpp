@@ -378,14 +378,24 @@ void registerServices(DBusObject& target, const std::vector<Service> &services, 
                                                  service.characteristic_uuid,
                                                  service.props)
                         .onReadValue(CHARACTERISTIC_METHOD_CALLBACK_LAMBDA {
-                          const GGKData *dataCtx =
-                              self.getDataPointer<const GGKData *>(
+                          GGKData *dataCtx =
+                              self.getDataPointer<GGKData *>(
                                   (const char *)pUserData, {});
+
+                          // TODO: pass data directly
                           std::vector<unsigned char> data;
                           data.resize(dataCtx->size);
                           memcpy(data.data(), dataCtx->data, dataCtx->size);
                           self.methodReturnValue(pInvocation, data, TRUE);
-                          delete dataCtx;
+
+                          if (dataCtx) {
+                            if (dataCtx->can_free) {
+                              free(dataCtx->data);
+                              dataCtx->data = NULL;
+                            }
+                            free(dataCtx);
+                            dataCtx = nullptr;
+                          }
                         })
                         .onWriteValue(CHARACTERISTIC_METHOD_CALLBACK_LAMBDA {
                           GVariant *pAyBuffer =
@@ -395,6 +405,7 @@ void registerServices(DBusObject& target, const std::vector<Service> &services, 
                           GGKData dataCtx;
                           dataCtx.data = (unsigned char *)data;
                           dataCtx.size = (unsigned)size;
+                          dataCtx.can_free = false;
                           self.setDataPointer((const char *)pUserData, &dataCtx);
                           self.methodReturnVariant(pInvocation, NULL);
                         });

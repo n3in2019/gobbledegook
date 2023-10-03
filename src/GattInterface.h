@@ -154,10 +154,10 @@ struct GattInterface : DBusInterface
 	//
 	//     const char *pTextString = self.getDataPointer<const char *>("text/string", "");
 	template<typename T>
-	T getDataPointer(const char *pName, const T defaultValue) const
+        T getDataPointer(const char *pName, T defaultValue) const
 	{
 		const void *pData = TheServer->getDataGetter()(pName);
-		return nullptr == pData ? defaultValue : static_cast<const T>(pData);
+                return nullptr == pData ? defaultValue : (T)pData;
 	}
 
 	// Sends a data value from the server back to the application through the server's registered data setter

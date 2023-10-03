@@ -63,6 +63,7 @@
 struct GGKData {
   unsigned char *data;
   unsigned size;
+  bool can_free = true;
 };
 
 struct Service {
